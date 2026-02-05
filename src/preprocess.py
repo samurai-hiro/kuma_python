@@ -1,8 +1,7 @@
 from sklearn.base import BaseEstimator,TransformerMixin
 from sklearn.preprocessing import OrdinalEncoder
-import pandas as pd
-import numpy as np
-
+import numpy as np #別フォルダに格納するので記載
+import pandas as pd #別フォルダに格納するので記載
 
 #データ前処理のクラス
 class xTrainPrePro(BaseEstimator,TransformerMixin):
@@ -16,9 +15,12 @@ class xTrainPrePro(BaseEstimator,TransformerMixin):
         #OrdinalEncoderのインスタンスを学習データで事前にfitしておく
         self.OrdinalEncoder.fit(x[['municd']])
 
-         #dateをdatetimeに変換
+        #dateをdatetimeに変換
         x['date'] = pd.to_datetime(x['date'])
         self.base_date = x['date'].min()
+
+        #特徴量可視化の時に使用
+        self.feature_names = None
 
         return self
 
@@ -27,7 +29,7 @@ class xTrainPrePro(BaseEstimator,TransformerMixin):
 
         #municdをOrdinalEncoding
         x.loc[:,'municd'] = self.OrdinalEncoder.transform(x[['municd']])[:,0]
-    
+
         #monthの列を追加(予測の時はfitが事前に呼ばれないので、ここでdatetimeに変換)
         if x['date'].dtypes == 'object':
             x['date'] = pd.to_datetime(x['date'])
@@ -47,5 +49,7 @@ class xTrainPrePro(BaseEstimator,TransformerMixin):
         #不要な特徴量を削除
         x = x.drop(['date','prefecture','muniname','month'],axis=1)
 
-        return x
+        #特徴量の可視化の時に使用
+        self.feature_names = x.columns.to_list()
 
+        return x
