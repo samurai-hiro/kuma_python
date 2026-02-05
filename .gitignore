@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Django
+db.sqlite3
+.env
+.env.*
+staticfiles/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store

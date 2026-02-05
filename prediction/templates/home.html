@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>東京 クマ出没予測</title>
+  <style>
+    #map { height: 400px; width: 50%; }
+    label { font-weight: bold; }
+  </style>
+</head>
+<body>
+  
+  <div style="background: linear-gradient(90deg, #f6d365 0%, #fda085 100%); color: #333; font-size: 1.5em; font-weight: bold; text-align: center; padding: 0.5em; border-radius: 10px; margin-bottom: 1em; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 3px solid #fda085;">
+    東京 クマ出没予測
+  </div>
+  <div style="background: #fffbe9; color: #d35400; font-size: 0.8em; font-weight: bold; text-align: left; padding: 0.7em 1em; border-radius: 8px; margin-bottom: 1.2em; border: 2px dashed #fda085; box-shadow: 0 1px 6px rgba(253,160,133,0.08); letter-spacing: 0.03em;">
+    <span style="font-size:1.5em; vertical-align:middle; margin-right:0.3em;">🗺️</span>
+    マップ上をクリックして、予測ボタンを押下してください<br>
+    <span style="font-size:0.85em; color:#a67c52; font-weight:normal;">※東京、埼玉、山梨以外の地点では、データを持っていないため予測できません</span>
+  </div>
+  <div style="display: flex; align-items: flex-start; gap: 2em;">
+    <div id="map" style="height: 400px; width: 50%; min-width: 320px;"></div>
+    <form method="post" enctype="multipart/form-data" style="flex: 1; min-width: 250px; max-width: 350px; background: #fffbe9; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 1em; border: 1.5px solid #fda085;">
+      {% csrf_token %}
+      <div style="display: flex; flex-direction: column; gap: 0.7em;">
+        {% if predict_result %}
+          予測結果:1.0以上で出没可能性高
+          <div style="margin: 1em 0; padding: 0.7em; background: #eafaf1; color: #1a7f37; border-radius: 6px; font-weight: bold; text-align: center; border: 1.5px solid #1a7f37;">
+            予測結果: {{ predict_result }}
+          </div>
+        {% endif %}
+        <label for="id_lat">緯度 (lat)</label>
+        {{ form.lat }}
+        <label for="id_lon">経度 (lon)</label>
+        {{ form.lon }}
+        <label for="id_address">住所 (address)</label>
+        {{ form.address }}
+        <label for="id_place_name">場所名 (place name)</label>
+        {{ form.place_name }}
+        <label for="id_date">日付 (date)</label>
+        {{ form.date }}
+        
+        <button type="submit" style="margin-top: 1em; background: #fda085; color: #fff; font-weight: bold; border: none; border-radius: 5px; padding: 0.5em 1.5em; cursor: pointer;">予測</button>
+      </div>
+    </form>
+  </div>
+  {% if form.errors %}
+    {{ form.errors }}
+  {% endif %}
+  {% if error_message %}
+  <div style="color: #fff; background-color: #e74c3c; padding: 10px; border-radius: 5px; margin: 10px 0;">
+    {{ error_message }}
+  </div>
+  {% endif %}
+  {% if input_info %}
+    <div style="margin-top:1em; color: #333;">
+      <strong>入力情報:</strong><br>
+      {{ input_info }}
+    </div>
+  {% endif %}
+ 
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA79fM6ZX7nEOH2oO4kZIzFa4_LWbW_24Q&libraries=places"></script>
+<script>
+let map;
+let geocoder;
+let placesService;
+let marker;
+
+function initMap() {
+  geocoder = new google.maps.Geocoder();
+  // Djangoテンプレート変数から値を取得
+  var lat = {{ form.lat.value|default:"35.657861" }};
+  var lng = {{ form.lon.value|default:"139.343139" }};
+  map = new google.maps.Map(document.getElementById("map"), {
+      center: { lat: lat, lng: lng },
+      zoom: 15,
+    });
+
+  placesService = new google.maps.places.PlacesService(map);
+
+  map.addListener("click", (e) => {
+    setMarker(e.latLng);
+    fillLatLng(e.latLng);
+
+    if (e.placeId) {
+      e.stop(); // Google標準の吹き出しを止める
+      getPlaceDetail(e.placeId);
+    } else {
+      // 施設以外（道路・空き地など）
+      reverseGeocode(e.latLng);
+      document.getElementById("id_place_name").value = "（施設なし）";
+    }
+  });
+}
+
+function setMarker(latLng) {
+  if (marker) marker.setMap(null);
+  marker = new google.maps.Marker({
+    position: latLng,
+    map: map,
+  });
+}
+
+function fillLatLng(latLng) {
+  document.getElementById("id_lat").value = latLng.lat().toFixed(6);
+  document.getElementById("id_lon").value = latLng.lng().toFixed(6);
+}
+
+function getPlaceDetail(placeId) {
+  placesService.getDetails(
+    { placeId: placeId },
+    (place, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK) {
+        document.getElementById("id_place_name").value = place.name;
+        document.getElementById("id_address").value = place.formatted_address;
+      }
+    }
+  );
+}
+
+function reverseGeocode(latLng) {
+  geocoder.geocode({ location: latLng }, (results, status) => {
+    if (status === "OK" && results[0]) {
+      document.getElementById("id_address").value =
+        results[0].formatted_address;
+    }
+  });
+}
+
+initMap();
+</script>
+
+</body>
+</html>
