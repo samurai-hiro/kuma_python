@@ -14,8 +14,8 @@ from sklearn.linear_model import LinearRegression
 from lightgbm import LGBMRegressor
 
 
-model_path = os.path.join(settings.BASE_DIR, 'prediction', 'model', 'kuma_analysis.joblib')
-# model_path = os.path.join(settings.BASE_DIR, 'prediction', 'model', 'kuma_analysis_LGBM.joblib')
+# model_path = os.path.join(settings.BASE_DIR, 'prediction', 'model', 'kuma_analysis.joblib')
+model_path = os.path.join(settings.BASE_DIR, 'prediction', 'model', 'kuma_analysis_LGBM.joblib')
 pipemodel = joblib.load(model_path)
 
 def prediction_view(request):
