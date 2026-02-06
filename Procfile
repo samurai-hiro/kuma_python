@@ -1,0 +1,1 @@
+web: gunicorn --workers=1 --worker-class=sync kuma.wsgi --timeout 300 --log-file -
