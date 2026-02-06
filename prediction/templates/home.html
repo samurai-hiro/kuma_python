@@ -17,7 +17,11 @@
     <span style="font-size:1.5em; vertical-align:middle; margin-right:0.3em;">🗺️</span>
     マップ上をクリックして、予測ボタンを押下してください<br>
     <span style="font-size:0.85em; color:#a67c52; font-weight:normal;">※東京、埼玉、山梨以外の地点では、データを持っていないため予測できません</span>
-  </div>
+  </div><div style="font-size:0.75em; color:#888; text-align:right; margin-bottom:1em;">
+  ※ 本サービスの利用に関する注意事項は
+  <a href="{% url 'disclaimer' %}">免責事項</a>をご確認ください
+</div>
+
   <div style="display: flex; align-items: flex-start; gap: 2em;">
     <div id="map" style="height: 400px; width: 50%; min-width: 320px;"></div>
     <form method="post" enctype="multipart/form-data" style="flex: 1; min-width: 250px; max-width: 350px; background: #fffbe9; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 1em; border: 1.5px solid #fda085;">

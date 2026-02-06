@@ -99,3 +99,6 @@ def prediction_view(request):
                                 'input_info': input_info})
         else:
             return render(request, 'home.html', {'form': form})
+
+def disclaimer_view(request):
+    return render(request,'disclaimer.html')
