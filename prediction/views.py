@@ -90,11 +90,16 @@ def prediction_view(request):
                 predict_result = f"{targetVal}"
                 input_info = f"lat:{lat} lon:{lon} address:{address} place_name:{place_name} date:{date}"
                 return render(request, 'home.html', {'form': form, 'predict_result': predict_result, 'input_info': input_info})
+            except ValueError as ve:
+                error_message = str(ve)
+                input_info = f"lat:{lat} lon:{lon} address:{address} place_name:{place_name} date:{date}"
+                
             except Exception as e:
                 tb = traceback.format_exc()
                 error_message = f"データ取得時にエラーが発生しました: {e}\n詳細:\n{tb}"
                 input_info = f"lat:{lat} lon:{lon} address:{address} place_name:{place_name} date:{date}"
-                return render(request, 'home.html',
+            
+            return render(request, 'home.html',
                                {'form': form,'error_message': error_message,
                                 'input_info': input_info})
         else:

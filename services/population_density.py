@@ -37,6 +37,10 @@ def get_city_code(lat, lon):
     r.raise_for_status()
     #sleepを入れる
     time.sleep(0.5)
+    
+    #値が取得できているかチェック
+    if 'results' not in r.json() or 'muniCd' not in r.json()['results']:
+        raise ValueError("日本のエリアを選択してください")
     municd = r.json()['results']['muniCd']
 
     #キャッシュに保存
