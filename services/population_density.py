@@ -1,6 +1,7 @@
 import time
 import requests
 from datetime import datetime
+from django.conf import settings
 
 
 #キャッシュの時限チェック
@@ -54,7 +55,8 @@ def get_city_code(lat, lon):
 _estat_value = {}
 def fetch_estat_value(STATS_DATA_ID,muni_cd,cat_code,date):
     ESTAT_API = "https://api.e-stat.go.jp/rest/3.0/app/json/getStatsData"
-    app_id = '1c35de1de48f42f93f15a503ef1e7e7c6261c7a2'
+    #APIキーは環境変数から取得
+    app_id = settings.ESTAT_API_ID
     
     key = (cat_code,muni_cd)
     #キャッシュの時限チェック

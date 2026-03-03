@@ -5,6 +5,79 @@ import time
 import pytest
 import services.population_density as pop_density
 
+def test_get_elevation_cache_expired(monkeypatch, disable_sleep):
+    pop_density._elevation.clear()
+    # 古いキャッシュをセット
+    old_time = 1706751600  # 2024-02-01 08:00
+    new_time = 1706755200  # 2024-02-01 09:00
+    old_mydate = datetime.fromtimestamp(old_time).strftime("%Y%m%d%H")
+    new_mydate = datetime.fromtimestamp(new_time).strftime("%Y%m%d%H")
+    key = (35.0, 139.0)
+    pop_density._elevation[old_mydate] = {key: 111.0}
+
+    monkeypatch.setattr(time, "time", lambda: new_time)
+
+    class MockResponse:
+        def raise_for_status(self): pass
+        def json(self): return {"elevation": 222.2}
+
+    def mock_get(url, params):
+        return MockResponse()
+
+    monkeypatch.setattr(requests, "get", mock_get)
+
+    result = pop_density.get_elevation(35.0, 139.0)
+    assert result == 222.0
+    # 古いキャッシュは消えて新しいキャッシュができている
+    assert old_mydate not in pop_density._elevation
+    assert key in pop_density._elevation[new_mydate]
+
+def test_fetch_estat_value_cache_expired(monkeypatch):
+    pop_density._estat_value.clear()
+    # 古いキャッシュをセット
+    old_time = 1706784000  # 2024-02-01 08:00
+    new_time = 1706787600  # 2024-02-01 09:00
+    old_mydate = datetime.fromtimestamp(old_time).strftime('%Y%m%d%H')
+    new_mydate = datetime.fromtimestamp(new_time).strftime('%Y%m%d%H')
+    key = ("A1101", "13101")
+    pop_density._estat_value[old_mydate] = {key: 123.0}
+
+    monkeypatch.setattr(pop_density.time, "time", lambda: new_time)
+    monkeypatch.setattr(pop_density.time, "sleep", lambda x: None)
+
+    class MockResponse:
+        def raise_for_status(self): pass
+        def json(self):
+            return {
+                "GET_STATS_DATA": {
+                    "STATISTICAL_DATA": {
+                        "DATA_INF": {
+                            "VALUE": [
+                                {"$": "100"},
+                                {"$": "200"}
+                            ]
+                        }
+                    }
+                }
+            }
+
+    def mock_get(url, params):
+        return MockResponse()
+
+    monkeypatch.setattr(pop_density.requests, "get", mock_get)
+
+    result = pop_density.fetch_estat_value(
+        STATS_DATA_ID="0000010101",
+        muni_cd="13101",
+        cat_code="A1101",
+        date=date(2024, 1, 1),
+    )
+    assert result == 200.0
+    # 古いキャッシュは消えて新しいキャッシュができている
+    assert old_mydate not in pop_density._estat_value
+    assert key in pop_density._estat_value[new_mydate]
+
+
 def test_get_elevation_http_error(monkeypatch, disable_sleep):
     pop_density._elevation.clear()
 
@@ -100,6 +173,15 @@ def test_fetch_estat_value_cache_hit(monkeypatch):
 
     # --- 検証 ---
     assert result == 999.0
+
+# 2023/4/1 なら0日
+assert pop_density.get_days_from_start(date(2023, 4, 1)) == 0
+# 2023/4/2 なら1日
+assert pop_density.get_days_from_start(date(2023, 4, 2)) == 1
+# 2024/4/1 なら366日（うるう年を考慮）
+assert pop_density.get_days_from_start(date(2024, 4, 1)) == 366
+# 2026/3/1 なら700日以上（実際の値でテスト）
+assert pop_density.get_days_from_start(date(2026, 3, 1)) == (date(2026, 3, 1) - date(2023, 4, 1)).days
 
 
 
