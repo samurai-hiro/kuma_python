@@ -58,15 +58,12 @@ def prediction_view(request):
                 #人口密度を計算
                 #人/km2
                 population_density = round((population / land_area) *100, 8)
-                # population_density = round(population / land_area, 8)
+                
                 #対数変換
                 population_density = np.log(population_density)
 
                 #標高を取得
                 elevation = get_elevation(lat, lon)
-                
-                #基準日からの経過日数を特徴量に追加
-                # days_from_start = get_days_from_start(date)
                 
                 #予測モデルに入れる特徴量をDataFrameにまとめる
                 #prefecture,muninameは予測モデルでは使用しないので空文字で埋める

@@ -37,7 +37,7 @@ class xTrainPrePro(BaseEstimator,TransformerMixin):
         x['month'] = x['date'].dt.month
 
         #monthWeight
-        month_weight = {'1':0,'2':0,'3':0,'4':1,'5':2,'6':4,'7':3,'8':3,'9':3,'10':4,'11':3,'12':2}
+        month_weight = {1:0,2:0,3:0,4:1,5:2,6:4,7:3,8:3,9:3,10:4,11:3,12:2}
         x['monthWeight'] = x['month'].replace(month_weight).astype(int)
 
         #基準日からの経過日数を特徴量に追加
