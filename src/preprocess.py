@@ -4,13 +4,36 @@ import numpy as np #別フォルダに格納するので記載
 import pandas as pd #別フォルダに格納するので記載
 
 #データ前処理のクラス
-class xTrainPrePro(BaseEstimator,TransformerMixin):
-    def __init__(self):
+class xTrainPrePro(BaseEstimator, TransformerMixin):
+    """
+    学習用データの前処理を行うクラス。
+
+    Attributes:
+        OrdinalEncoder (OrdinalEncoder): 市区町村コード用エンコーダ。
+        base_date (pd.Timestamp): 基準日。
+        feature_names (list): 特徴量名リスト。
+    """
+    def __init__(self) -> None:
+        """
+        xTrainPreProの初期化。
+        Returns:
+            None
+        """
         self.OrdinalEncoder = OrdinalEncoder(handle_unknown='use_encoded_value',
                                              unknown_value=-1)
         self.base_date = None #基準日に使用する
 
-    def fit(self,x,y=None):
+    def fit(self, x: pd.DataFrame, y=None) -> 'xTrainPrePro':
+        """
+        前処理用エンコーダのfitと基準日設定。
+
+        Args:
+            x (pd.DataFrame): 学習データ。
+            y: 未使用。
+
+        Returns:
+            xTrainPrePro: 自身のインスタンス。
+        """
 
         #OrdinalEncoderのインスタンスを学習データで事前にfitしておく
         self.OrdinalEncoder.fit(x[['municd']])
@@ -24,7 +47,19 @@ class xTrainPrePro(BaseEstimator,TransformerMixin):
 
         return self
 
-    def transform(self,x):
+    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        データの前処理を実施し、特徴量を生成します。
+
+        Args:
+            x (pd.DataFrame): 入力データ。
+
+        Returns:
+            pd.DataFrame: 前処理済みデータ。
+
+        Raises:
+            ValueError: populationdensity列が存在しない場合。
+        """
         x = x.copy()
 
         #municdをOrdinalEncoding

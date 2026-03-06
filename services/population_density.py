@@ -5,7 +5,17 @@ from django.conf import settings
 
 
 #キャッシュの時限チェック
-def check_cache_time(cache_dict,mydate):
+def check_cache_time(cache_dict: dict, mydate: str) -> None:
+    """
+    キャッシュの時限チェックを行い、必要に応じてクリアします。
+
+    Args:
+        cache_dict (dict): キャッシュ辞書。
+        mydate (str): 現在の年月日時（キー）。
+
+    Returns:
+        None
+    """
     
     #キャッシュのキーに現在の年月日時がなければクリア
     if mydate not in cache_dict:
@@ -18,7 +28,21 @@ def check_cache_time(cache_dict,mydate):
 
 #緯度経度から市区町村コードを取得
 _city_code = {}
-def get_city_code(lat, lon):
+def get_city_code(lat: float, lon: float) -> int:
+    """
+    緯度経度から市区町村コードを取得します。
+
+    Args:
+        lat (float): 緯度。
+        lon (float): 経度。
+
+    Returns:
+        int: 市区町村コード。
+
+    Raises:
+        ValueError: 日本のエリア外の場合。
+        requests.RequestException: API通信エラー時。
+    """
     kokudo_API = "https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress"
     key = (round(lat,5),round(lon,5))
     #キャッシュの時限チェック
@@ -53,7 +77,23 @@ def get_city_code(lat, lon):
 
 #e-statから情報を取得
 _estat_value = {}
-def fetch_estat_value(STATS_DATA_ID,muni_cd,cat_code,date):
+def fetch_estat_value(STATS_DATA_ID: str, muni_cd: int, cat_code: str, date: 'datetime') -> float:
+    """
+    e-stat APIから指定した統計情報を取得します。
+
+    Args:
+        STATS_DATA_ID (str): 統計データID。
+        muni_cd (int): 市区町村コード。
+        cat_code (str): カテゴリコード。
+        date (datetime): 日付。
+
+    Returns:
+        float: 統計値。
+
+    Raises:
+        requests.RequestException: API通信エラー時。
+        ValueError: データ取得失敗時。
+    """
     ESTAT_API = "https://api.e-stat.go.jp/rest/3.0/app/json/getStatsData"
     #APIキーは環境変数から取得
     app_id = settings.ESTAT_API_ID
@@ -88,7 +128,21 @@ def fetch_estat_value(STATS_DATA_ID,muni_cd,cat_code,date):
 
 #緯度経度から標高を取得
 _elevation = {}
-def get_elevation(lat, lon):
+def get_elevation(lat: float, lon: float) -> float:
+    """
+    緯度経度から標高を取得します。
+
+    Args:
+        lat (float): 緯度。
+        lon (float): 経度。
+
+    Returns:
+        float: 標高（m）。
+
+    Raises:
+        requests.RequestException: API通信エラー時。
+        ValueError: 標高取得失敗時。
+    """
     elevation_api = "https://cyberjapandata2.gsi.go.jp/general/dem/scripts/getelevation.php"
     
     key = (round(lat,5),round(lon,5))
@@ -113,7 +167,16 @@ def get_elevation(lat, lon):
     _elevation[mydate][key] = elevation
     return (elevation)
 
-def get_days_from_start(date):
+def get_days_from_start(date: 'datetime.date') -> int:
+    """
+    基準日（2023/4/1）からの経過日数を計算します。
+
+    Args:
+        date (datetime.date): 対象日。
+
+    Returns:
+        int: 基準日からの経過日数。
+    """
     base_daet = '2023/4/1'
     base_daet_obj = datetime.strptime(base_daet, '%Y/%m/%d').date()
     days_from_start = (date - base_daet_obj).days

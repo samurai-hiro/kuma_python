@@ -18,7 +18,20 @@ from lightgbm import LGBMRegressor
 model_path = os.path.join(settings.BASE_DIR, 'prediction', 'model', 'kuma_analysis_LGBM.joblib')
 pipemodel = joblib.load(model_path)
 
-def prediction_view(request):
+def prediction_view(request) -> 'HttpResponse':
+    """
+    予測フォームの表示と予測処理を行うビュー。
+
+    Args:
+        request: DjangoのHttpRequestオブジェクト。
+
+    Returns:
+        HttpResponse: home.htmlテンプレートのレンダリング結果。
+
+    Raises:
+        ValueError: データ取得時の値エラー。
+        Exception: その他の予測処理中の例外。
+    """
    
     
     if request.method == 'GET':
@@ -102,5 +115,14 @@ def prediction_view(request):
         else:
             return render(request, 'home.html', {'form': form})
 
-def disclaimer_view(request):
+def disclaimer_view(request) -> 'HttpResponse':
+    """
+    免責事項ページを表示するビュー。
+
+    Args:
+        request: DjangoのHttpRequestオブジェクト。
+
+    Returns:
+        HttpResponse: disclaimer.htmlテンプレートのレンダリング結果。
+    """
     return render(request,'disclaimer.html')
