@@ -1,22 +1,10 @@
 from django.shortcuts import render
 from .forms import PredictionForm
 from services.population_density import get_city_code,fetch_estat_value,get_elevation,get_days_from_start
-from src.preprocess import xTrainPrePro
 import traceback
-import joblib
-from django.conf import settings
-import os
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LinearRegression
-from lightgbm import LGBMRegressor
-
-
-# model_path = os.path.join(settings.BASE_DIR, 'prediction', 'model', 'kuma_analysis.joblib')
-model_path = os.path.join(settings.BASE_DIR, 'prediction', 'model', 'kuma_analysis_LGBM.joblib')
-pipemodel = joblib.load(model_path)
+from prediction.model.load_model import pipemodel
 
 def prediction_view(request) -> 'HttpResponse':
     """
