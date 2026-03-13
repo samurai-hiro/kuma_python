@@ -18,10 +18,9 @@
     マップ上をクリックして、予測ボタンを押下してください<br>
     <span style="font-size:0.85em; color:#a67c52; font-weight:normal;">※東京、埼玉、山梨以外の地点では、データを持っていないため予測できません</span>
   </div>
-
   <div style="display: flex; align-items: flex-start; gap: 2em;">
     <div id="map" style="height: 400px; width: 50%; min-width: 320px;"></div>
-    <form method="post" enctype="multipart/form-data" style="flex: 1; min-width: 250px; max-width: 350px; background: #fffbe9; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 1em; border: 1.5px solid #fda085;">
+    <form method="post" onsubmit="showloading()" enctype="multipart/form-data" style="flex: 1; min-width: 250px; max-width: 350px; background: #fffbe9; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 1em; border: 1.5px solid #fda085;">
       {% csrf_token %}
       <div style="display: flex; flex-direction: column; gap: 0.7em;">
         {% if predict_result %}
@@ -45,6 +44,9 @@
       </div>
     </form>
   </div>
+  <div id="loading" style="display: none; text-align: center; margin-bottom: 1em;">
+    <p>🐻 出没確率を計算中...</p>
+  </div>
   {% if form.errors %}
     {{ form.errors }}
   {% endif %}
@@ -60,23 +62,27 @@
     </div>
   {% endif %}
  
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA79fM6ZX7nEOH2oO4kZIzFa4_LWbW_24Q&libraries=places"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA79fM6ZX7nEOH2oO4kZIzFa4_LWbW_24Q&libraries=places&callback=initMap" async defer></script>
 <script>
 let map;
 let geocoder;
 let placesService;
 let marker;
 
+function showloading(){
+  document.getElementById("loading").style.display = "block";
+}
+
 function initMap() {
   geocoder = new google.maps.Geocoder();
   // Djangoテンプレート変数から値を取得
-  var lat = {{ form.lat.value|default:"35.657861" }};
-  var lng = {{ form.lon.value|default:"139.343139" }};
+  var lat = parseFloat("{{ form.lat.value|default:'35.657861' }}");
+  var lng = parseFloat("{{ form.lon.value|default:'139.343139' }}");
   map = new google.maps.Map(document.getElementById("map"), {
       center: { lat: lat, lng: lng },
       zoom: 15,
     });
-
+  setMarker({lat: lat, lng: lng});
   placesService = new google.maps.places.PlacesService(map);
 
   map.addListener("click", (e) => {
@@ -96,7 +102,7 @@ function initMap() {
 
 function setMarker(latLng) {
   if (marker) marker.setMap(null);
-  marker = new google.maps.Marker({
+    marker = new google.maps.Marker({
     position: latLng,
     map: map,
   });
@@ -128,7 +134,6 @@ function reverseGeocode(latLng) {
   });
 }
 
-initMap();
 </script>
 
 </body>
