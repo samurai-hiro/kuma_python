@@ -6,7 +6,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 ESTAT_API_ID = os.getenv("ESTAT_API_ID")
-
+FASTAPI_KUMA_URL = os.getenv("FASTAPI_KUMA_URL")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
