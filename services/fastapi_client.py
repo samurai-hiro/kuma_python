@@ -20,27 +20,22 @@ def predict_kuma(lat, lon, date):
         'date': date.isoformat(),
     }
     
-    try:
-
-        #初回接続
+    #初回接続
+    r = session.post(settings.FASTAPI_KUMA_URL,
+                     json=payload,
+                     timeout=10
+                    )
+    #失敗したらリトライする(heroku起動待ち)
+    if r.status_code != 200:
+        time.sleep(3)
         r = session.post(settings.FASTAPI_KUMA_URL,
                          json=payload,
                          timeout=10
                          )
-        #失敗したらリトライする(heroku起動待ち)
-        if r.status_code != 200:
-            time.sleep(3)
-            r = session.post(settings.FASTAPI_KUMA_URL,
-                         json=payload,
-                         timeout=10
-                         )
-        r.raise_for_status()  # エラーが発生した場合に例外をスロー
-        return r.json()
-    except requests.exceptions.RequestException as e:
-        return {'result': None, 'error': "APIサーバが起動中です。数秒後に再試行してください。"}
-
-    except Exception as e:
-        return {'result': None, 'error': str(e)}
+    # ここで 4xx/5xx やタイムアウト等は 
+    # requests.exceptions.RequestException 系として raise される
+    r.raise_for_status()
+    return r.json()
     
     
         

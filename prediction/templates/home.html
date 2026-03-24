@@ -20,15 +20,31 @@
   </div>
   <div style="display: flex; align-items: flex-start; gap: 2em;">
     <div id="map" style="height: 400px; width: 50%; min-width: 320px;"></div>
-    <form method="post" onsubmit="showloading()" enctype="multipart/form-data" style="flex: 1; min-width: 250px; max-width: 350px; background: #fffbe9; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 1em; border: 1.5px solid #fda085;">
+    <form method="post" onsubmit="submitWithRetry(event)" enctype="multipart/form-data" style="flex: 1; min-width: 250px; max-width: 350px; background: #fffbe9; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 1em; border: 1.5px solid #fda085;">
       {% csrf_token %}
       <div style="display: flex; flex-direction: column; gap: 0.7em;">
-        {% if predict_result %}
-          予測結果:1.0以上で出没可能性高
-          <div style="margin: 1em 0; padding: 0.7em; background: #eafaf1; color: #1a7f37; border-radius: 6px; font-weight: bold; text-align: center; border: 1.5px solid #1a7f37;">
-            予測結果: {{ predict_result }}
+        <div id="result-area">
+          {% if predict_result %}
+            予測結果:1.0以上で出没可能性高
+            <div style="margin: 1em 0; padding: 0.7em; background: #eafaf1; color: #1a7f37; border-radius: 6px; font-weight: bold; text-align: center; border: 1.5px solid #1a7f37;">
+              予測結果: {{ predict_result }}
+            </div>
+          {% endif %}
+          {% if form.errors %}
+            {{ form.errors }}
+          {% endif %}
+          {% if error_message %}
+          <div style="color: #fff; background-color: #e74c3c; padding: 10px; border-radius: 5px; margin: 10px 0;">
+            {{ error_message }}
           </div>
-        {% endif %}
+          {% endif %}
+          {% if input_info %}
+            <div style="margin-top:1em; color: #333;">
+              <strong>入力情報:</strong><br>
+              {{ input_info }}
+            </div>
+          {% endif %}
+        </div>
         <label for="id_lat">緯度 (lat)</label>
         {{ form.lat }}
         <label for="id_lon">経度 (lon)</label>
@@ -45,22 +61,8 @@
     </form>
   </div>
   <div id="loading" style="display: none; text-align: center; margin-bottom: 1em;">
-    <p>🐻 出没確率を計算中...</p>
+    <p id="loading-text">🐻 出没確率を計算中...</p>
   </div>
-  {% if form.errors %}
-    {{ form.errors }}
-  {% endif %}
-  {% if error_message %}
-  <div style="color: #fff; background-color: #e74c3c; padding: 10px; border-radius: 5px; margin: 10px 0;">
-    {{ error_message }}
-  </div>
-  {% endif %}
-  {% if input_info %}
-    <div style="margin-top:1em; color: #333;">
-      <strong>入力情報:</strong><br>
-      {{ input_info }}
-    </div>
-  {% endif %}
  
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA79fM6ZX7nEOH2oO4kZIzFa4_LWbW_24Q&libraries=places&callback=initMap" async defer></script>
 <script>
@@ -132,6 +134,87 @@ function reverseGeocode(latLng) {
         results[0].formatted_address;
     }
   });
+}
+
+
+function updateLoadingMessage(retryCount) {
+  const messages = [
+    "🐻 出没確率を計算中...",
+    "🐻 サーバーを起動中です...",
+    "🐻 サーバーを起動中です...",
+    "🐻 サーバーを起動中です..."
+  ];
+
+  const msg = messages[Math.min(retryCount, messages.length - 1)];
+  document.getElementById("loading-text").innerText = msg;
+}
+
+async function submitWithRetry(event, retryCount = 0, form = null) {
+  if (event) {
+    event.preventDefault();
+    form = event.target; // 初回だけ取得
+  }
+
+  showloading();
+  updateLoadingMessage(retryCount);
+
+  const formData = new FormData(form);
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  try {
+    const res = await fetch("", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-CSRFToken": csrfToken
+      }
+    });
+    const text = await res.text();
+
+    if (!res.ok) {
+      // まだリトライ余地がある場合は例外にして catch 側で再試行
+      if (retryCount < 5) {
+        throw new Error("Server warming up");
+      } else {
+        // 最終試行: サーバから返ってきたHTML内の error_message / input_info を表示してから終了
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "text/html");
+        const newResultArea = doc.querySelector("#result-area");
+        const currentResultArea = document.querySelector("#result-area");
+
+        if (newResultArea && currentResultArea) {
+          currentResultArea.innerHTML = newResultArea.innerHTML;
+        }
+
+        document.getElementById("loading").style.display = "none";
+        alert("時間をおいて再度お試しください");
+        return;
+      }
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, "text/html");
+    const newResultArea = doc.querySelector("#result-area");
+    const currentResultArea = document.querySelector("#result-area");
+
+    if (newResultArea && currentResultArea) {
+      currentResultArea.innerHTML = newResultArea.innerHTML;
+    }
+
+    document.getElementById("loading").style.display = "none";
+
+  } catch (e) {
+    console.log("エラー:", e);
+
+    if (retryCount < 5) {
+      setTimeout(() => {
+        submitWithRetry(null, retryCount + 1, form); // ← formを引き継ぐ
+      }, 2000);
+    } else {
+      document.getElementById("loading").style.display = "none";
+      alert("時間をおいて再度お試しください");
+    }
+  }
 }
 
 </script>
