@@ -25,7 +25,7 @@ def predict_kuma(lat, lon, date):
         #初回接続
         r = session.post(settings.FASTAPI_KUMA_URL,
                          json=payload,
-                         timeout=5
+                         timeout=10
                          )
         #失敗したらリトライする(heroku起動待ち)
         if r.status_code != 200:
