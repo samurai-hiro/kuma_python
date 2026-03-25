@@ -65,8 +65,6 @@ def prediction_view(request) -> 'HttpResponse':
                                 )
             except Exception as e:
                 error_message = f"データ取得時にエラーが発生しました: {e}"
-                # input_info = f"lat:{lat} lon:{lon} address:{address} place_name:{place_name} date:{date}"
-            
                 return render(request, 'home.html',
                                {'form': form,'error_message': error_message,
                                 'input_info': input_info})
