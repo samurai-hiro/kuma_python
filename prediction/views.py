@@ -48,11 +48,13 @@ def prediction_view(request) -> 'HttpResponse':
                     'input_info': input_info,
                 }
                 if raw_value is None:
-                    context['error_message'] = "予測に失敗しました"
+                    context['error_message'] = f"予測に失敗しました：{result.get('error')}"
+                    
                 else:
                     targetVal = round(raw_value, 8)
                     context['predict_result'] = f"{targetVal}"
-                    return render(request, 'home.html', context)
+                
+                return render(request, 'home.html', context)
                 
             # ★ FastAPI への HTTP/接続エラーだけを捕まえて 503 を返す
             except requests.exceptions.RequestException as e:
