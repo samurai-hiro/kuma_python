@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import patch, MagicMock
-from services import fastapi_client
 import datetime
+from unittest.mock import MagicMock, patch
+
+from services import fastapi_client
+
 
 @patch('services.fastapi_client.session.post')
 def test_predict_kuma_success(mock_post):

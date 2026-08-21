@@ -1,17 +1,25 @@
-from datetime import date
-from datetime import datetime
-import requests
 import time
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
 import pytest
+import requests
+
 import services.population_density as pop_density
+
+JST = ZoneInfo("Asia/Tokyo")
+
+def hour_key(ts: float) -> str:
+    return datetime.fromtimestamp(ts, tz=JST).strftime("%Y%m%d%H")
+
 
 def test_get_elevation_cache_expired(monkeypatch, disable_sleep):
     pop_density._elevation.clear()
     # 古いキャッシュをセット
     old_time = 1706751600  # 2024-02-01 08:00
     new_time = 1706755200  # 2024-02-01 09:00
-    old_mydate = datetime.fromtimestamp(old_time).strftime("%Y%m%d%H")
-    new_mydate = datetime.fromtimestamp(new_time).strftime("%Y%m%d%H")
+    old_mydate = hour_key(old_time)
+    new_mydate = hour_key(new_time)
     key = (35.0, 139.0)
     pop_density._elevation[old_mydate] = {key: 111.0}
 
@@ -37,8 +45,8 @@ def test_fetch_estat_value_cache_expired(monkeypatch):
     # 古いキャッシュをセット
     old_time = 1706784000  # 2024-02-01 08:00
     new_time = 1706787600  # 2024-02-01 09:00
-    old_mydate = datetime.fromtimestamp(old_time).strftime('%Y%m%d%H')
-    new_mydate = datetime.fromtimestamp(new_time).strftime('%Y%m%d%H')
+    old_mydate = hour_key(old_time)
+    new_mydate = hour_key(new_time)
     key = ("A1101", "13101")
     pop_density._estat_value[old_mydate] = {key: 123.0}
 
@@ -103,7 +111,7 @@ def test_get_elevation_cache_hit(monkeypatch, disable_sleep):
     fixed_time = 1706755200
     monkeypatch.setattr(time, "time", lambda: fixed_time)
 
-    mydate = datetime.fromtimestamp(fixed_time).strftime("%Y%m%d%H")
+    mydate = hour_key(fixed_time)
     key = (35.0, 139.0)
 
     pop_density._elevation[mydate] = {key: 456.0}
@@ -139,7 +147,7 @@ def test_get_elevation_first_call(monkeypatch, disable_sleep):
 
     assert result == 123.0
 
-    mydate = datetime.fromtimestamp(1706755200).strftime("%Y%m%d%H")
+    mydate = hour_key(1706755200)
     key = (35.0, 139.0)
 
     assert key in pop_density._elevation[mydate]
@@ -152,7 +160,7 @@ def test_fetch_estat_value_cache_hit(monkeypatch):
     monkeypatch.setattr(pop_density.time, "time", lambda: fixed_time)
     
     # --- キャッシュを事前投入 ---
-    mydate = datetime.fromtimestamp(fixed_time).strftime('%Y%m%d%H')
+    mydate = hour_key(fixed_time)
     key = ("A1101", "13101")
     pop_density._estat_value.clear()
     pop_density._estat_value[mydate] = {key: 999.0}
@@ -284,7 +292,7 @@ def test_get_city_code_cache_hit(monkeypatch, disable_sleep):
     # 時刻固定（2024-02-01 09:00）
     fixed_time = 1706755200
     monkeypatch.setattr(time, "time", lambda: fixed_time)
-    mydate = datetime.fromtimestamp(fixed_time).strftime('%Y%m%d%H')
+    mydate = hour_key(fixed_time)
     key = (round(35.0, 5), round(139.0, 5))
 
     # キャッシュを正しく仕込む

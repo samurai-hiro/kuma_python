@@ -15,3 +15,6 @@ staticfiles/
 # OS
 Thumbs.db
 .DS_Store
+
+# CSV
+*.csv

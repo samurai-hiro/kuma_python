@@ -1,5 +1,6 @@
-import requests
 import time
+
+import requests
 from django.conf import settings
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry

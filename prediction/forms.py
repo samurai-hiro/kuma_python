@@ -1,5 +1,6 @@
 from django import forms
 
+
 class PredictionForm(forms.Form):
     lat = forms.FloatField(label='lat')
     lon = forms.FloatField(label='lon')

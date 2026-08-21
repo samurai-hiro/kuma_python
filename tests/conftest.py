@@ -1,6 +1,8 @@
-import pytest
-import time
 import os
+import time
+
+import pytest
+
 
 @pytest.fixture
 def disable_sleep(monkeypatch):

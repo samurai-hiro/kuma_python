@@ -1,7 +1,8 @@
-from sklearn.base import BaseEstimator,TransformerMixin
+import numpy as np  #別フォルダに格納するので記載
+import pandas as pd  #別フォルダに格納するので記載
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import OrdinalEncoder
-import numpy as np #別フォルダに格納するので記載
-import pandas as pd #別フォルダに格納するので記載
+
 
 #データ前処理のクラス
 class xTrainPrePro(BaseEstimator, TransformerMixin):

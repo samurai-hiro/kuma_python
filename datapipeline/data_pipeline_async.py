@@ -1,20 +1,18 @@
-import pandas as pd
-import time
-import requests
-import sys
-import httpx
 import asyncio
+import os
+
+import httpx
+import pandas as pd
+from dotenv import load_dotenv
 from tqdm.asyncio import tqdm
 
 #非同期通信 同時接続数の設定
 sem = asyncio.Semaphore(3)
 
-#データcsvファイルを読み込む
-df = pd.read_csv('/content/sample_data/data.csv')
-
-from google.colab import userdata
 #APIキーを取得
-app_id = userdata.get('ESTAT_APP_ID')
+load_dotenv()
+app_id = os.getenv("ESTAT_APP_ID")
+
 
 kokudo_API_1 = "https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress"
 
@@ -127,7 +125,7 @@ async def latlon_process_row(client, row):
             )
             await asyncio.sleep(0.2)
             return {"municd":municd, "elevation":elevation}
-        except Exception as e:
+        except (httpx.HTTPError, KeyError, TypeError, ValueError) as e:
             print(f"エラー：{row['lat'], row['lon']} {e}")
             return {"municd":None, "elevation":None}
 
@@ -143,106 +141,95 @@ async def municd_process_row(client, STATS_DATA_ID, STATS_DATA_ID_2, row):
             )
             await asyncio.sleep(0.2)
             return {"muniname":muniname, "prefecture":prefecture, "population":population, "area":area}
-        except Exception as e:
+        except (httpx.HTTPError, KeyError, TypeError, ValueError) as e:
             print(f"エラー：{row['municd']} {e}")
             return {"muniname":None, "prefecture":None, "population":None, "area":None}
 
-#メイン
 
-#データフレームを初期化(不要な列が存在しないようにする)
-df = df[['lat', 'lon', 'date', 'targetVal']].copy()
+async def main():
+    df = pd.read_csv('/content/sample_data/data.csv')
 
-df['municd'] = None
-df['elevation'] = None
-STATS_DATA_ID = '0000020201' #社会・人口統計体系
-STATS_DATA_ID_2 = '0000020102' #土地面積
-final_results = []
+    # データフレームを初期化
+    df = df[['lat', 'lon', 'date', 'targetVal']].copy()
+    df['municd'] = None
+    df['elevation'] = None
 
-#最初のループでlat,lonから市区町村コードと標高を取得
-#100件ずつClientをリセットして実行
-#retry機能を追加
-counter = 0
-max_retries = 3
-while max_retries > counter:
-    # municdが欠損している行だけを抽出
-    # 初回は df 全体、2回目以降は失敗した行だけが対象になる
-    target_index = df[df['municd'].isna()].index
-
-    if len(target_index) == 0:
-        print("全てのmunicdを取得完了しました。")
-        break
-
-    print(f"残り{len(target_index)}件のmunicd取得を開始します")
-    retry_df = df.loc[target_index]
-
+    stats_data_id = '0000020201'
+    stats_data_id_2 = '0000020102'
     chunk_size = 100
-    for i in range(0, len(retry_df), chunk_size):
-        chunk = retry_df.iloc[i : i + chunk_size]
+    max_retries = 3
 
-        async with httpx.AsyncClient(timeout=30) as client:
-            tasks = [latlon_process_row(client, row) for _, row in chunk.iterrows()]
+    counter = 0
+    while counter < max_retries:
+        final_results = []
+        target_index = df[df['municd'].isna()].index
+        if len(target_index) == 0:
+            print("全てのmunicdを取得完了しました。")
+            break
+     
+        print(f"残り{len(target_index)}件のmunicd取得を開始します")
+        retry_df = df.loc[target_index]
 
-            # 100件分を並行実行（進捗バー付き）
-            results = await tqdm.gather(*tasks, desc=f"chunk {i//chunk_size + 1}")
-            final_results.extend(results)
+        for i in range(0, len(retry_df), chunk_size):
+            chunk = retry_df.iloc[i : i + chunk_size]
+            async with httpx.AsyncClient(timeout=30) as client:
+                tasks = [latlon_process_row(client, row) for _, row in chunk.iterrows()]
+                results = await tqdm.gather(*tasks, desc=f"chunk {i//chunk_size + 1}")
+                final_results.extend(results)
+                await asyncio.sleep(1)
 
-            # チャンクの合間にサーバーを休ませる
-            await asyncio.sleep(1)
-    # 取得した結果を元の df の正しい位置（index）に書き戻す
-    res_df = pd.DataFrame(final_results, index=target_index)
-    df.update(res_df) # updateを使うと、indexが一致する場所だけ上書きしてくれます
+        res_df = pd.DataFrame(final_results, index=target_index)
+        df.update(res_df)
 
-    #サーバへの負荷を考慮
-    if len(df[df['municd'].isna()]) > 0:
-        print("一部失敗したため、3秒後にリトライします...")
-        await asyncio.sleep(3)
+        if len(df[df['municd'].isna()]) > 0:
+            print("一部失敗したため、3秒後にリトライします...")
+            await asyncio.sleep(3)
 
-    counter += 1
+        counter += 1
 
-#2回目のループで市区町村名、県名、人口、土地面積を取得
-counter = 0
-df['muniname'] = None
-df['prefecture'] = None
-df['population'] = None
-df['area'] = None
+    counter = 0
+    df['muniname'] = None
+    df['prefecture'] = None
+    df['population'] = None
+    df['area'] = None
 
-while max_retries > counter:
+    while counter < max_retries:
+        final_results = []
+        target_index = df[df['muniname'].isna()].index
+        if len(target_index) == 0:
+            print("全てのmuninameを取得完了しました。")
+            break
 
-    # municdが欠損している行だけを抽出
-    # 初回は df 全体、2回目以降は失敗した行だけが対象になる
-    target_index = None
-    target_index = df[df['muniname'].isna()].index
-    if len(target_index) == 0:
-        print("全てのmuninameを取得完了しました。")
-        break
+        print(f"残り{len(target_index)}件のmuniname取得を開始します")
+        retry_df = df.loc[target_index]
 
-    print(f"残り{len(target_index)}件のmuniname取得を開始します")
-    retry_df = None
-    retry_df = df.loc[target_index]
+        for i in range(0, len(retry_df), chunk_size):
+            chunk = retry_df.iloc[i : i + chunk_size]
+            async with httpx.AsyncClient(timeout=30) as client:
+                tasks = [
+                    municd_process_row(client, stats_data_id, stats_data_id_2, row)
+                    for _, row in chunk.iterrows()
+                ]
+                results = await tqdm.gather(*tasks, desc=f"chunk {i//chunk_size + 1}")
+                final_results.extend(results)
+                await asyncio.sleep(1)
 
-    final_results = []
-    for i in range(0, len(retry_df), chunk_size):
-        chunk = retry_df.iloc[i : i + chunk_size]
+        res_df = pd.DataFrame(final_results, index=target_index)
+        df.update(res_df)
+        counter += 1
 
-        async with httpx.AsyncClient(timeout=30) as client:
-            tasks = [municd_process_row(client, STATS_DATA_ID, STATS_DATA_ID_2, row) for _, row in chunk.iterrows()]
-            results = await tqdm.gather(*tasks, desc=f"chunk {i//chunk_size + 1}")
-            final_results.extend(results)
+    df['population_density'] = (df['population'] / df['area']) * 100
+    df = df[['lat','lon','date','elevation','municd','muniname','prefecture','population','area','population_density','targetVal']]
+    df.to_csv('/content/sample_data/mydata.csv')
+    print(df)
 
-            # チャンクの合間にサーバーを休ませる
-            await asyncio.sleep(1)
-    # 取得した結果を元の df の正しい位置（index）に書き戻す
-    res_df = None
-    res_df = pd.DataFrame(final_results,index=target_index)
-    df.update(res_df)
+if __name__ == "__main__":
+    asyncio.run(main())
 
-    counter += 1
 
-# #人口密度を算出(e-statの土地面積はha単位なので最後に100を掛ける)
-df['population_density'] = (df['population'] / df['area']) * 100
 
-df = df[['lat','lon','date','elevation','municd','muniname','prefecture','population','area','population_density','targetVal']]
 
-#csv出力
-df.to_csv('/content/sample_data/mydata.csv')
-print(df)
+
+
+
+

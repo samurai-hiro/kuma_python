@@ -1,8 +1,8 @@
+from unittest.mock import patch
+
 import pytest
 from django.test import Client
-from unittest.mock import patch
-from pytest_django.asserts import assertTemplateUsed, assertContains
-import datetime
+from pytest_django.asserts import assertContains, assertTemplateUsed
 
 
 @pytest.mark.django_db

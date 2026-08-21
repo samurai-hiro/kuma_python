@@ -1,8 +1,14 @@
 import time
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
 import requests
-from datetime import datetime
 from django.conf import settings
 
+JST = ZoneInfo("Asia/Tokyo")
+
+def _current_hour_key(current_time: float) -> str:
+    return datetime.fromtimestamp(current_time, tz=JST).strftime("%Y%m%d%H")
 
 #キャッシュの時限チェック
 def check_cache_time(cache_dict: dict, mydate: str) -> None:
@@ -47,7 +53,7 @@ def get_city_code(lat: float, lon: float) -> int:
     key = (round(lat,5),round(lon,5))
     #キャッシュの時限チェック
     current_time = time.time()
-    mydate = datetime.fromtimestamp(current_time).strftime('%Y%m%d%H')
+    mydate = _current_hour_key(current_time)
     check_cache_time(_city_code,mydate)
 
     #キャッシュにあればそれを返す
@@ -101,7 +107,7 @@ def fetch_estat_value(STATS_DATA_ID: str, muni_cd: int, cat_code: str, date: 'da
     key = (cat_code,muni_cd)
     #キャッシュの時限チェック
     current_time = time.time()
-    mydate = datetime.fromtimestamp(current_time).strftime('%Y%m%d%H')
+    mydate = _current_hour_key(current_time)
     check_cache_time(_estat_value,mydate)
 
     if key in _estat_value[mydate]:
@@ -148,7 +154,7 @@ def get_elevation(lat: float, lon: float) -> float:
     key = (round(lat,5),round(lon,5))
     #キャッシュの時限チェック
     current_time = time.time()
-    mydate = datetime.fromtimestamp(current_time).strftime('%Y%m%d%H')
+    mydate = _current_hour_key(current_time)
     check_cache_time(_elevation,mydate)
 
     #キャッシュにあればそれを返す
@@ -167,17 +173,16 @@ def get_elevation(lat: float, lon: float) -> float:
     _elevation[mydate][key] = elevation
     return (elevation)
 
-def get_days_from_start(date: 'datetime.date') -> int:
+def get_days_from_start(target_date: date) -> int:
     """
     基準日（2023/4/1）からの経過日数を計算します。
 
     Args:
-        date (datetime.date): 対象日。
+        target_date (date): 対象日。
 
     Returns:
         int: 基準日からの経過日数。
     """
-    base_daet = '2023/4/1'
-    base_daet_obj = datetime.strptime(base_daet, '%Y/%m/%d').date()
-    days_from_start = (date - base_daet_obj).days
-    return (days_from_start)
+    base_date = date(2023, 4, 1)
+    days_from_start = (target_date - base_date).days
+    return days_from_start
